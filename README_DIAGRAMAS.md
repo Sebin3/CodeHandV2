@@ -6,14 +6,14 @@ Este documento resume, a alto nivel, el flujo, la arquitectura y las interaccion
 
 ```mermaid
 flowchart LR
-  A[Usuario] -->|Navega / interactúa| B[Frontend React]
-  B -->|Video de cámara| C[MediaPipe Hands]
-  C -->|Landmarks (42/63)| D[Lógica de Página]
-  D -->|/models/:id/predict| E[Backend FastAPI]
-  E -->|Carga Modelo .pkl| F[Cache/Disco Persistente]
+  A["Usuario"] -->|Navega / interactúa| B["Frontend React"]
+  B -->|Video de cámara| C["MediaPipe Hands"]
+  C -->|Landmarks (42/63)| D["Lógica de Página"]
+  D -->|/models/:id/predict| E["Backend FastAPI"]
+  E -->|Carga Modelo .pkl| F["Cache/Disco Persistente"]
   E -->|Predicción| D
   D -->|Actualiza UI / Voz| B
-  B -->|Rutas (Router)| G[Pages: ReconocerVocales\nReconocerPalabras\nAlgebraCalc\nModelos\nEntrenarModelo\nReconocerGenerico]
+  B -->|Rutas (Router)| G["Pages:<br/>ReconocerVocales<br/>ReconocerPalabras<br/>AlgebraCalc<br/>Modelos<br/>EntrenarModelo<br/>ReconocerGenerico"]
 ```
 
 Notas:
@@ -144,15 +144,15 @@ classDiagram
 
 ```mermaid
 flowchart TB
-  A[Usuario captura muestras] --> B[POST /models/:id/samples/:category]
-  B --> C[DB almacena features]
-  A --> D[POST /models/:id/train]
-  D --> E[FastAPI arma dataset X,y]
-  E --> F[Validación dimensiones (42/63 consistentes)]
-  F -->|ok| G[Entrena sklearn]
-  G --> H[Guarda .pkl en ruta persistente]
-  H --> I[status=trained]
-  F -->|mismatch| J[status=error + log]
+  A["Usuario captura muestras"] --> B["POST /models/:id/samples/:category"]
+  B --> C["DB almacena features"]
+  A --> D["POST /models/:id/train"]
+  D --> E["FastAPI arma dataset X,y"]
+  E --> F["Validación dimensiones (42/63 consistentes)"]
+  F -->|ok| G["Entrena sklearn"]
+  G --> H["Guarda .pkl en ruta persistente"]
+  H --> I["status=trained"]
+  F -->|mismatch| J["status=error + log"]
 ```
 
 ### 8) Notas de Implementación
