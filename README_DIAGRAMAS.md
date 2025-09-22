@@ -165,4 +165,122 @@ flowchart TB
 - En GitHub/VSCode con extensiones Mermaid.
 - O usa `https://mermaid.live` para pegar los bloques y renderizarlos.
 
+### 10) Diagrama de Secuencia End-to-End (Frontend + Backend)
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant U as Usuario
+  participant FE as Frontend React (App.jsx)
+  participant RT as React Router
+  participant PG as Página (RV/RP/AC/MO/EM/RG)
+  participant MP as MediaPipe Hands
+  participant SR as SpeechRecognition
+  participant API as ApiService (fetch)
+  participant BE as FastAPI (Backend)
+  participant DB as DB (modelos/muestras)
+  participant MC as ModeloCache
+  participant FS as FS (/models/*.pkl)
+  participant TR as Entrenamiento (sklearn)
+
+  Note over U,FE: Navegación inicial / Home
+  U->>FE: Abre la app
+  FE->>RT: Resuelve ruta actual
+  RT-->>FE: Elemento de página
+  FE->>PG: Renderiza componente
+
+  Note over PG,API: Listar modelos (Modelos.jsx)
+  PG->>API: GET /models
+  API->>BE: HTTP GET /models
+  BE->>DB: Consulta modelos
+  DB-->>BE: Lista de modelos
+  BE-->>API: 200 JSON modelos
+  API-->>PG: setState(modelos)
+  PG-->>U: Render cards acciones (Reconocer/Entrenar/Eliminar)
+
+  alt Crear modelo (CreateModelModal)
+    U->>PG: Completa formulario (nombre, categorías)
+    PG->>API: POST /models/create
+    API->>BE: HTTP POST /models/create
+    BE->>DB: Inserta modelo (status=created)
+    DB-->>BE: id del modelo
+    BE-->>API: 201 {id}
+    API-->>PG: resultado creación
+    PG->>API: POST /models/{id}/train (auto-train)
+    API->>BE: HTTP POST /models/{id}/train
+    BE->>DB: Lee muestras (si existen)
+    alt Hay muestras suficientes y dimensiones válidas
+      BE->>TR: Entrena sklearn
+      TR-->>BE: Modelo en memoria
+      BE->>FS: Guarda {id}.pkl
+      BE->>DB: status=trained / accuracy
+      BE-->>API: 200 {status: trained}
+      API-->>PG: OK (actualiza UI)
+    else Falta .pkl o mismatch 42/63
+      BE-->>API: 4xx/5xx con detalle
+      API-->>PG: Mostrar error / guía
+    end
+  end
+
+  Note over PG,MP: Reconocimiento en tiempo real (cámara)
+  U->>PG: Activa cámara
+  PG->>MP: Inicializa y procesa frames
+  MP-->>PG: Landmarks suavizados (EMA)
+  loop Intervalo SEND_INTERVAL
+    PG->>API: POST /models/{id}/predict (features 42/63)
+    API->>BE: HTTP POST /models/{id}/predict
+    BE->>MC: ¿Modelo en cache?
+    alt Cache HIT
+      MC-->>BE: clf
+    else Cache MISS
+      BE->>FS: Cargar {id}.pkl
+      alt Archivo existe
+        FS-->>BE: Modelo cargado
+        BE->>MC: Cachear modelo
+      else Archivo no encontrado
+        BE-->>API: 503/500 Archivo de modelo no encontrado
+        API-->>PG: Manejar error (opcional reentrenar)
+      end
+    end
+    alt Modelo cargado
+      BE-->>API: 200 {predicción, probas}
+      API-->>PG: Actualiza buffers/estado
+      PG-->>U: Muestra letra/dígito provisional y estable
+    end
+  end
+
+  Note over PG,SR: Comandos de voz (ej. AlgebraCalc / ReconocerPalabras)
+  U->>PG: Activa micrófono
+  PG->>SR: start()
+  SR-->>PG: onresult(transcript)
+  alt AlgebraCalc
+    PG-->>PG: Si transcript coincide con dígito detectado → añadir token
+    PG-->>PG: Operadores: más/menos/por/entre
+    PG-->>PG: "es igual a" → eval expresión → setResultado
+    PG-->>U: Muestra expresión y resultado
+  else ReconocerPalabras
+    PG-->>PG: "enviar" concatena letra1+letra2
+    PG-->>PG: "espacio","borrar","limpiar"
+    PG-->>U: Actualiza palabra formada
+  end
+
+  Note over PG,API: Entrenar desde página de entrenamiento
+  U->>PG: Captura muestras por categoría
+  PG->>API: POST /models/{id}/samples/{cat}
+  API->>BE: Guarda features
+  BE->>DB: Inserta Sample
+  DB-->>BE: OK
+  BE-->>API: 200
+  API-->>PG: OK
+  U->>PG: Clic Entrenar
+  PG->>API: POST /models/{id}/train
+  API->>BE: Entrenar (validación 42 vs 63)
+  BE->>TR: sklearn fit
+  TR-->>BE: Modelo entrenado
+  BE->>FS: Escribir {id}.pkl
+  BE->>DB: status=trained/accuracy
+  BE-->>API: 200
+  API-->>PG: OK (feedback UI)
+```
+
 
