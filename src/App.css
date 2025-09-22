@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+/* App Layout */
+.app {
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Remove default body margins */
+body {
+  margin: 0;
+  padding: 0;
+}
